@@ -79,9 +79,14 @@ else
 fi
 
 echo "== C2: onboarding clauses survive =="
-check_contains "$CANONICAL_DOC" "Every agent must run the onboarding gate" "instructions require the onboarding gate"
+# Assert the COMMANDS are named, not that a particular English sentence survives.
+# The earlier version pinned an exact sentence, which meant any contributor
+# rewording the instructions turned CI red for a cosmetic reason — a gate that
+# fires on prose edits teaches people that red means "ignore me".
+check_contains "$CANONICAL_DOC" "./ops/install_git_hooks.sh" "instructions name the hook installer"
 check_contains "$CANONICAL_DOC" "./ops/check_release_governance_consistency.sh" "instructions name the consistency command"
-check_contains "$CANONICAL_DOC" "Work must not proceed if the gate fails" "instructions block work on gate failure"
+check_contains "$CANONICAL_DOC" "./ops/enforce_agent_onboarding_gate.sh" "instructions name the composed gate"
+check_contains "$CANONICAL_DOC" "must not proceed" "instructions block work on gate failure"
 for doc in "$ONBOARDING_DOC" "$DOC_INDEX"; do
   check_contains "$doc" "enforce_agent_onboarding_gate.sh" "$(basename "$doc") references the onboarding gate"
 done

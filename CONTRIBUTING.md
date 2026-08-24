@@ -59,6 +59,13 @@ care more about what your change *refuses* than about what it enables.
 - Bash / POSIX shell
 - Git
 
+### First, once per clone
+```bash
+./ops/install_git_hooks.sh --apply
+```
+This arms a pre-commit leak scan. Hooks are per-checkout, so a fresh clone is
+unprotected until you run it; CI is the backstop that covers everyone.
+
 ### The one command
 ```bash
 ./ops/enforce_agent_onboarding_gate.sh

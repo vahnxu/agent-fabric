@@ -42,14 +42,17 @@ class FixtureRepo(unittest.TestCase):
         (self.root / "docs" / "workspace").mkdir(parents=True)
 
         shutil.copy2(GATE, self.root / "ops" / GATE.name)
+        shutil.copy2(REPO / "ops" / "install_git_hooks.sh", self.root / "ops")
         shutil.copy2(REPO / "ops" / "enforce_agent_onboarding_gate.sh", self.root / "ops")
         shutil.copy2(REPO / "ops" / "check_negative_test_coverage.py", self.root / "ops")
 
         agents = (
             "# AGENTS.md — fixture\n\n"
-            "Every agent must run the onboarding gate before making any change:\n\n"
-            "```bash\n./ops/check_release_governance_consistency.sh\n```\n\n"
-            "Work must not proceed if the gate fails.\n"
+            "Arm the hooks, then run the gates before making any change:\n\n"
+            "```bash\n./ops/install_git_hooks.sh --apply\n"
+            "./ops/check_release_governance_consistency.sh\n"
+            "./ops/enforce_agent_onboarding_gate.sh\n```\n\n"
+            "Work must not proceed if any gate fails.\n"
         )
         for name in ("AGENTS.md", "CLAUDE.md", "GEMINI.md"):
             (self.root / name).write_text(agents, encoding="utf-8")
@@ -189,6 +192,24 @@ class CatchesInstructionDrift(FixtureRepo):
             (self.root / name).write_text("# no rules here\n", encoding="utf-8")
         self.stage_all()
         self.assertEqual(self.run_gate().returncode, 1)
+
+    def test_rewording_the_prose_does_not_break_the_gate(self):
+        # C2 pins the COMMANDS, not a sentence. A contributor rephrasing the
+        # instructions must not turn CI red — a gate that fires on cosmetic edits
+        # trains people to ignore it.
+        reworded = (
+            "# AGENTS.md — fixture\n\n"
+            "Before touching anything, arm the hooks and clear the gates:\n\n"
+            "```bash\n./ops/install_git_hooks.sh --apply\n"
+            "./ops/check_release_governance_consistency.sh\n"
+            "./ops/enforce_agent_onboarding_gate.sh\n```\n\n"
+            "Work must not proceed while any of them is red.\n"
+        )
+        for name in ("AGENTS.md", "CLAUDE.md", "GEMINI.md"):
+            (self.root / name).write_text(reworded, encoding="utf-8")
+        self.stage_all()
+        cp = self.run_gate()
+        self.assertEqual(cp.returncode, 0, f"a reworded but complete doc was rejected:\n{cp.stdout}")
 
 
 class CatchesDeclarationDrift(FixtureRepo):

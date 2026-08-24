@@ -10,6 +10,7 @@ public_mirror: vahnxu/agent-fabric
 
 checks:
   onboarding_gate: true
+  git_hooks_armed: true
   governance_consistency: true
   negative_test_coverage: true
   autosync_governance: false
@@ -21,6 +22,7 @@ governance_scripts:
   - ops/check_negative_test_coverage.py
   - ops/enforce_agent_onboarding_gate.sh
   - ops/sync_agent_instructions.sh
+  - ops/install_git_hooks.sh
 
 sync:
   truth_source: durable_remote
