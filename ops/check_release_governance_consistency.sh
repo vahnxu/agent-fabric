@@ -134,17 +134,23 @@ echo "== C4: declared publication target matches reality =="
 if [[ -f "$GOVERNANCE_YAML" ]]; then
   pass "governance.yaml exists"
   declared_remote="$(grep -E '^[[:space:]]*durable_remote:' "$GOVERNANCE_YAML" | head -1 | sed 's/.*:[[:space:]]*//' | tr -d '"' || true)"
-  actual_remote="$(git -C "$ROOT_DIR" remote 2>/dev/null | head -1 || true)"
+  # The assertion is EXISTENCE, not primacy. A repository legitimately carries
+  # several remotes — a durable mirror plus a public one — and `git remote` lists
+  # them alphabetically, so comparing against the first entry would turn the act
+  # of adding a public mirror into a gate failure. What must hold is only that
+  # the remote this repository declares as its source of truth actually exists.
+  configured_remotes="$(git -C "$ROOT_DIR" remote 2>/dev/null || true)"
   if [[ -z "$declared_remote" ]]; then
     fail "governance.yaml declares a durable_remote"
   elif [[ "$declared_remote" == "pending" ]]; then
     pass "publication target is explicitly pending (no remote assertion made)"
-  elif [[ -z "$actual_remote" ]]; then
+  elif [[ -z "$configured_remotes" ]]; then
     fail "declared durable_remote '$declared_remote' has no configured git remote"
-  elif [[ "$declared_remote" == "$actual_remote" ]]; then
-    pass "declared durable_remote '$declared_remote' matches the configured remote"
+  elif printf '%s\n' "$configured_remotes" | grep -qx -- "$declared_remote"; then
+    pass "declared durable_remote '$declared_remote' is configured ($(printf '%s' "$configured_remotes" | tr '\n' ' ' | sed 's/ $//'))"
   else
-    fail "declared durable_remote '$declared_remote' does not match configured remote '$actual_remote'"
+    fail "declared durable_remote '$declared_remote' is not among the configured remotes" \
+         "configured: $(printf '%s' "$configured_remotes" | tr '\n' ' ')"
   fi
 else
   fail "governance.yaml exists"

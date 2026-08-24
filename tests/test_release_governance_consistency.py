@@ -173,7 +173,26 @@ class CatchesDeclarationDrift(FixtureRepo):
         cp = self.run_gate()
         self.assertEqual(cp.returncode, 1, "a declared-but-absent remote was not caught")
 
+    def test_adding_a_public_mirror_does_not_break_the_gate(self):
+        # Regression: the check compared the declared remote against the FIRST
+        # entry of `git remote`, which is alphabetical. Adding a mirror named
+        # "github" therefore turned publication itself into a gate failure —
+        # the gate would have blocked the one action it exists to protect.
+        self.git("remote", "add", "origin", "ssh://example.invalid/x.git")
+        self.git("remote", "add", "github", "https://example.invalid/pub.git")
+        (self.root / "governance.yaml").write_text(
+            GOVERNANCE_YAML.replace("durable_remote: pending", "durable_remote: origin"),
+            encoding="utf-8",
+        )
+        self.stage_all()
+        cp = self.run_gate()
+        self.assertEqual(
+            cp.returncode, 0,
+            f"adding a second remote broke the gate:\n{cp.stdout}\n{cp.stderr}",
+        )
+
     def test_declared_remote_mismatch_is_caught(self):
+        # Only "backup" exists; declaring "origin" must still be caught.
         self.git("remote", "add", "backup", "https://example.invalid/x.git")
         (self.root / "governance.yaml").write_text(
             GOVERNANCE_YAML.replace("durable_remote: pending", "durable_remote: origin"),
