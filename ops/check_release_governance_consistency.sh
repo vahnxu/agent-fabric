@@ -90,6 +90,15 @@ echo "== C3: no private data in tracked files =="
 # Patterns are assembled from fragments so this script does not itself contain a
 # literal example of what it forbids — otherwise it would flag itself, and a gate
 # that must be exempted from its own rule teaches contributors to add exemptions.
+#
+# The last three patterns exist because of a live incident. Workspace-level tooling
+# enumerates mirror targets by SHAPE — "does this directory contain an AGENTS.md" —
+# and injects private governance text into every match, after which a separate
+# autocommit step commits it and an auto-repair step pushes it. On 2026-08-24 this
+# repository was published and injected within the same hour. Blocking the injector
+# is the fix; these patterns are the fail-safe, and they are carrier-independent:
+# they assert that workspace-private content is absent, not that a particular
+# script behaved. A future injector nobody has written yet is covered too.
 declare -a LEAK_LABELS=(
   "absolute macOS home directory"
   "absolute Linux home directory"
@@ -98,6 +107,9 @@ declare -a LEAK_LABELS=(
   "AWS access key id"
   "PEM private key block"
   "bearer token assignment"
+  "workspace-private governance mirror"
+  "author machine identity"
+  "private workspace super-repo path"
 )
 declare -a LEAK_PATTERNS=(
   "/Users/[a-z][a-z0-9_-]"
@@ -107,6 +119,9 @@ declare -a LEAK_PATTERNS=(
   "AKIA[0-9A-Z]{16}"
   "BEGIN [A-Z ]*PRIVATE KEY"
   "(api_key|secret|token|password)[[:space:]]*=[[:space:]]*[\"'][A-Za-z0-9_-]{16,}"
+  "NON_CLAUDE_L2_MIRROR"
+  "Mac ?mini|MacBook"
+  "AI_Workspace"
 )
 # Fixtures may need a home-shaped path; they must use these reserved examples.
 ALLOWED_EXAMPLES="/Users/test|/Users/example|/home/runner|/home/user"

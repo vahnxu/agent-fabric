@@ -3,8 +3,10 @@ schema_version: 1
 project: agent-fabric
 type: minimal
 
+visibility: public
+
 durable_remote: origin
-public_mirror: pending
+public_mirror: vahnxu/agent-fabric
 
 checks:
   onboarding_gate: true

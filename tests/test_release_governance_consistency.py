@@ -131,6 +131,36 @@ class CatchesPrivateData(FixtureRepo):
         self.plant("core/conf.py", 'api_key = "' + 'abcdef0123456789abcdef"\n')
         self.assertEqual(self.run_gate().returncode, 1)
 
+    def test_workspace_private_mirror_block_is_caught(self):
+        # Live incident 2026-08-24: workspace tooling enumerates mirror targets by
+        # shape ("does this directory have an AGENTS.md") and injected 65 lines of
+        # private governance — including business account identifiers — into this
+        # repository's AGENTS.md within an hour of it being published. A separate
+        # autocommit step commits such regenerations and an auto-repair step pushes
+        # them, so the injection had a fully automated path to the public remote.
+        self.plant("AGENTS.md", "# AGENTS.md\n<!-- BEGIN NON_CLAUDE" + "_L2_MIRROR -->\nprivate\n")
+        self.assertEqual(
+            self.run_gate().returncode, 1,
+            "a workspace-private mirror block was not caught",
+        )
+
+    def test_author_machine_identity_is_caught(self):
+        for name in ("Mac mi" + "ni", "Mac" + "Book"):
+            with self.subTest(machine=name):
+                self.plant("docs/note.md", f"pushed to the {name} bare mirror\n")
+                self.assertEqual(self.run_gate().returncode, 1, f"{name} was not caught")
+
+    def test_private_super_repo_path_is_caught(self):
+        self.plant("docs/note.md", "see ~/AI_" + "Workspace/ops/thing.sh\n")
+        self.assertEqual(self.run_gate().returncode, 1)
+
+    def test_ordinary_workspace_word_is_not_caught(self):
+        # The pattern targets the private super-repo's specific name, not the
+        # English word — docs/workspace/ is this repository's own convention.
+        self.plant("docs/note.md", "logs live under docs/workspace/logs/\n")
+        cp = self.run_gate()
+        self.assertEqual(cp.returncode, 0, f"the plain word 'workspace' was flagged:\n{cp.stdout}")
+
     def test_reserved_example_paths_are_allowed(self):
         # Fixtures legitimately need a home-shaped path; these must not trip it,
         # otherwise contributors learn to add exemptions instead of fixing leaks.
