@@ -2,19 +2,24 @@ schema_version: 1
 
 project: agent-fabric
 type: minimal
-github: vahnxu/agent-fabric
+
+durable_remote: origin
+public_mirror: pending
 
 checks:
   onboarding_gate: true
   governance_consistency: true
+  negative_test_coverage: true
   autosync_governance: false
   deploy_runbook: false
   acceptance_smoke: false
 
 governance_scripts:
   - ops/check_release_governance_consistency.sh
+  - ops/check_negative_test_coverage.py
   - ops/enforce_agent_onboarding_gate.sh
+  - ops/sync_agent_instructions.sh
 
 sync:
-  truth_source: github
+  truth_source: durable_remote
   autosync: true

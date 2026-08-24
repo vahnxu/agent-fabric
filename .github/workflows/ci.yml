@@ -10,6 +10,7 @@ jobs:
   test-and-gate:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
 
@@ -22,14 +23,22 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Run unit tests
+    # Identity is required because several suites build throwaway git
+    # repositories and make real commits in them.
+    - name: Configure git identity for fixture repositories
       run: |
-        python3 -m unittest discover tests/
+        git config --global user.email "ci@example.invalid"
+        git config --global user.name "ci"
+        git config --global init.defaultBranch main
 
-    - name: Run governance consistency check
-      run: |
-        bash ./ops/check_release_governance_consistency.sh
+    - name: Governance consistency (instructions agree · no private data)
+      run: bash ./ops/check_release_governance_consistency.sh
 
-    - name: Enforce agent onboarding gate
-      run: |
-        bash ./ops/enforce_agent_onboarding_gate.sh
+    - name: Negative test coverage (every mechanism proves what it refuses)
+      run: python3 ./ops/check_negative_test_coverage.py
+
+    - name: Unit tests
+      run: python3 -m unittest discover tests/ -v
+
+    - name: Composed onboarding gate
+      run: bash ./ops/enforce_agent_onboarding_gate.sh

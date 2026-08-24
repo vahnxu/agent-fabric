@@ -1,34 +1,41 @@
-# Substrate — 文档索引
+# Agent Operations Fabric — documentation index
 
-## 项目范围
+## What lives where
 
-个人数字基础设施：计算设备、软件工具栈、网络、数据资产、智能家居、车辆、**治理基础设施**。
+| Path | Contents |
+|------|----------|
+| `docs/01_master_thesis.md` | Why institutional cost collapses when the executor is an agent |
+| `docs/02_minimal_kernel.md` | The four fundamental laws, the compounding loop, three files to start |
+| `docs/03_governance_architecture.md` | Layered contracts (L1/L2/L3), runtime decoupling, rotation topology |
+| `docs/04_incident_casebook.md` | Production incidents, each inverted into the invariant it taught |
+| `docs/05_curriculum.md` | A seven-session syllabus built on the casebook |
+| `docs/workspace/logs/` | Execution logs, one per session, `YYYYMMDD_<Summary>.md` |
 
-## 目录结构
+## How the repository is organised
 
-| 目录 | 内容 |
-|------|------|
-| `compute/` | 计算设备台账（MacBook, iPhone, iPad...） |
-| `stack/` | 软件工具栈（Claude Code, MCP, CLI, SwiftBar...） |
-| `network/` | 网络（VPN, DNS, 宽带, WiFi, 安全审计, `vpn-first-boot/`） |
-| `data/` | 数据资产（备份策略、文件整理） |
-| `home/` | 智能家居、家电（Terncy...） |
-| `vehicle/` | 车辆保养 |
-| `governance/` | 治理基础设施（harness 架构、ops 脚本速查） |
+| Path | Contents |
+|------|----------|
+| `core/` | The mechanisms themselves. Each one refuses something, and says in its own docstring what it does **not** cover. |
+| `tests/` | One suite per mechanism. Negative cases lead: a suite that only walks the accepted path goes green whether or not the refusal works. |
+| `ops/` | Repository gates, run identically on a laptop and in CI. |
 
-## 文档子目录
+## Onboarding gate
 
-| 目录 | 内容 |
-|------|------|
-| `docs/workspace/logs/` | session 执行日志（YYYYMMDD 格式） |
-| `docs/workspace/governance/` | 治理策略副本（TASK_LOG_SPEC.md 等） |
-| `docs/workspace/references/` | 设计决策、讨论记录 |
-| `docs/workspace/archive/` | 历史/已取代文档 |
-
-## 入职门禁
-
-新 Agent 在执行任何生产相关任务前，必须运行：
+Every agent runs this before touching anything, every session:
 
 ```bash
 ./ops/enforce_agent_onboarding_gate.sh
 ```
+
+It composes three checks — governance consistency, negative test coverage, and
+the full suite — and refuses on the first failure. Having passed before does not
+count.
+
+## Reading order for a new contributor
+
+1. `docs/01_master_thesis.md` — the premise: text is a liability, mechanism is an asset.
+2. `docs/02_minimal_kernel.md` — the smallest thing you can adopt today.
+3. `core/pre_tool_use_safety.sh` — the shortest mechanism, and a worked example of
+   asserting an invariant instead of enumerating a past incident.
+4. `tests/test_pre_tool_use_safety.py` — what the same mechanism must refuse, and
+   what it must not falsely block.
