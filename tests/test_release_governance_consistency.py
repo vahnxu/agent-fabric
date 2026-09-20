@@ -28,7 +28,7 @@ durable_remote: pending
 public_mirror: pending
 """
 
-GITIGNORE = ".DS_Store\n.env\n__pycache__/\n"
+GITIGNORE = ".DS_Store\n.env\n__pycache__/\nAGENTS.md\nCLAUDE.md\nGEMINI.md\n"
 
 
 class FixtureRepo(unittest.TestCase):
@@ -54,8 +54,9 @@ class FixtureRepo(unittest.TestCase):
             "./ops/enforce_agent_onboarding_gate.sh\n```\n\n"
             "Work must not proceed if any gate fails.\n"
         )
-        for name in ("AGENTS.md", "CLAUDE.md", "GEMINI.md"):
-            (self.root / name).write_text(agents, encoding="utf-8")
+        (self.root / "AGENTS.md").write_text(agents, encoding="utf-8")
+        (self.root / "CLAUDE.md").write_text("@AGENTS.md\n", encoding="utf-8")
+        (self.root / "GEMINI.md").symlink_to("AGENTS.md")
 
         (self.root / "governance.yaml").write_text(GOVERNANCE_YAML, encoding="utf-8")
         (self.root / ".gitignore").write_text(GITIGNORE, encoding="utf-8")
@@ -141,7 +142,7 @@ class CatchesPrivateData(FixtureRepo):
         # repository's AGENTS.md within an hour of it being published. A separate
         # autocommit step commits such regenerations and an auto-repair step pushes
         # them, so the injection had a fully automated path to the public remote.
-        self.plant("AGENTS.md", "# AGENTS.md\n<!-- BEGIN NON_CLAUDE" + "_L2_MIRROR -->\nprivate\n")
+        self.plant("docs/injected.md", "# injected\n<!-- BEGIN NON_CLAUDE" + "_L2_MIRROR -->\nprivate\n")
         self.assertEqual(
             self.run_gate().returncode, 1,
             "a workspace-private mirror block was not caught",
@@ -180,7 +181,7 @@ class CatchesInstructionDrift(FixtureRepo):
         self.stage_all()
         cp = self.run_gate()
         self.assertEqual(cp.returncode, 1, "instruction drift was not caught")
-        self.assertIn("drift detected", cp.stdout)
+        self.assertIn("canonical loader", cp.stdout)
 
     def test_missing_mirror_is_caught(self):
         (self.root / "GEMINI.md").unlink()
@@ -205,8 +206,7 @@ class CatchesInstructionDrift(FixtureRepo):
             "./ops/enforce_agent_onboarding_gate.sh\n```\n\n"
             "Work must not proceed while any of them is red.\n"
         )
-        for name in ("AGENTS.md", "CLAUDE.md", "GEMINI.md"):
-            (self.root / name).write_text(reworded, encoding="utf-8")
+        (self.root / "AGENTS.md").write_text(reworded, encoding="utf-8")
         self.stage_all()
         cp = self.run_gate()
         self.assertEqual(cp.returncode, 0, f"a reworded but complete doc was rejected:\n{cp.stdout}")

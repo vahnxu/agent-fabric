@@ -47,10 +47,11 @@ class HookFixture(unittest.TestCase):
             shutil.copy2(script, self.root / "ops" / script.name)
         shutil.copy2(REPO / "ops" / "check_negative_test_coverage.py", self.root / "ops")
 
-        for name in ("AGENTS.md", "CLAUDE.md", "GEMINI.md"):
-            (self.root / name).write_text(AGENTS, encoding="utf-8")
+        (self.root / "AGENTS.md").write_text(AGENTS, encoding="utf-8")
+        (self.root / "CLAUDE.md").write_text("@AGENTS.md\n", encoding="utf-8")
+        (self.root / "GEMINI.md").symlink_to("AGENTS.md")
         (self.root / "governance.yaml").write_text(GOVERNANCE_YAML, encoding="utf-8")
-        (self.root / ".gitignore").write_text(".DS_Store\n.env\n__pycache__/\n", encoding="utf-8")
+        (self.root / ".gitignore").write_text(".DS_Store\n.env\n__pycache__/\nAGENTS.md\nCLAUDE.md\nGEMINI.md\n", encoding="utf-8")
         for doc in ("README.md", "NEW_AGENT_ONBOARDING_PROMPT.md"):
             (self.root / "docs" / "workspace" / doc).write_text(
                 "Run ./ops/enforce_agent_onboarding_gate.sh first.\n", encoding="utf-8"
@@ -112,7 +113,7 @@ class ArmedHookRefusesLeakingCommits(HookFixture):
             + "\n<!-- BEGIN NON_CLAUDE" + "_L2_MIRROR -->\nprivate governance\n",
             encoding="utf-8",
         )
-        self.git("add", "AGENTS.md")
+        self.git("add", "-f", "AGENTS.md")
         head_before = self.git("rev-parse", "HEAD").stdout.strip()
         cp = self.git("commit", "-m", "should be refused")
         self.assertNotEqual(cp.returncode, 0, "the injected commit was allowed")
