@@ -61,22 +61,49 @@ check_file_exists() {
   if [[ -f "$1" ]]; then pass "$2"; else fail "$2" "missing file: $1"; fi
 }
 
-echo "== C1: agent instruction files agree =="
+echo "== C1: agent instruction files are local-only and correctly shaped =="
+# 2026-09-20 (owner decision): instruction files are NOT published from this
+# repository. They exist in every working copy but are never tracked, so that a
+# public clone carries no CLAUDE.md / AGENTS.md / GEMINI.md.
+#
+# What this gate now asserts:
+#   · AGENTS.md is present locally and carries the instructions
+#   · CLAUDE.md is exactly the canonical one-line loader `@AGENTS.md`
+#     (byte-exact: any prose in the loader re-creates a second hand-written face)
+#   · GEMINI.md resolves to AGENTS.md
+#   · none of the three is tracked by git
+# It no longer asserts byte-equality between carriers — CLAUDE.md is deliberately
+# a loader now, not a copy.
+CANONICAL_LOADER='@AGENTS.md'
 if [[ -f "$CANONICAL_DOC" ]]; then
   pass "AGENTS.md is present as the canonical instruction file"
-  for mirror in "${MIRROR_DOCS[@]}"; do
-    name="$(basename "$mirror")"
-    if [[ ! -e "$mirror" ]]; then
-      fail "$name exists" "run ./ops/sync_agent_instructions.sh"
-    elif cmp -s "$CANONICAL_DOC" "$mirror"; then
-      pass "$name matches AGENTS.md"
-    else
-      fail "$name matches AGENTS.md" "drift detected — run ./ops/sync_agent_instructions.sh"
-    fi
-  done
 else
   fail "AGENTS.md is present as the canonical instruction file"
 fi
+
+if [[ -f "$ROOT_DIR/CLAUDE.md" ]]; then
+  if [[ "$(cat "$ROOT_DIR/CLAUDE.md")" == "$CANONICAL_LOADER" ]]; then
+    pass "CLAUDE.md is exactly the canonical loader"
+  else
+    fail "CLAUDE.md is exactly the canonical loader" "write a single line: $CANONICAL_LOADER"
+  fi
+else
+  fail "CLAUDE.md is present as the loader" "write a single line: $CANONICAL_LOADER"
+fi
+
+if [[ -e "$ROOT_DIR/GEMINI.md" ]] && cmp -s "$CANONICAL_DOC" "$ROOT_DIR/GEMINI.md"; then
+  pass "GEMINI.md resolves to AGENTS.md"
+else
+  fail "GEMINI.md resolves to AGENTS.md" "ln -sf AGENTS.md GEMINI.md"
+fi
+
+for _f in AGENTS.md CLAUDE.md GEMINI.md; do
+  if git -C "$ROOT_DIR" ls-files --error-unmatch "$_f" >/dev/null 2>&1; then
+    fail "$_f is untracked" "git rm --cached $_f  # instruction files must not be published"
+  else
+    pass "$_f is untracked (not published)"
+  fi
+done
 
 echo "== C2: onboarding clauses survive =="
 # Assert the COMMANDS are named, not that a particular English sentence survives.
